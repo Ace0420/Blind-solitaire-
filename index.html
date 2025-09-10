@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Blind Solitaire with Free Coins</title>
+<style>
+body { background: #000; color: #fff; font-size: 1.2em; text-align: center; }
+button { margin: 1em; padding: 1em; font-size: 1em; cursor: pointer; }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+</style>
+</head>
+<body>
+<h1>Blind Solitaire with Free Coins</h1>
+<p>Earn coins by listening to audio ads when you run out!</p>
+<div id="gameArea" role="application">
+  <p id="status">Moves: 0 | Coins: 0</p>
+  <button id="hintButton">Hint</button>
+  <button id="adButton" style="display: none;">Listen to Ad for Free Coins</button>
+</div>
+<!-- ARIA Live Region for dynamic announcements -->
+<div id="aria-live-region" aria-live="polite" aria-atomic="true" class="sr-only"></div>
+<script>
+// Audio feedback
+const sounds = {
+  reward: new Audio('https://actions.google.com/sounds/v1/cartoon/coins.ogg'),
+  ad: new Audio('https://actions.google.com/sounds/v1/cartoon/slide_whistle_to_drum.ogg')
+};
+
+const ariaLiveRegion = document.getElementById('aria-live-region');
+const statusElement = document.getElementById('status');
+let coins = 0;
+
+// Speech output function now also updates the ARIA live region
+function speak(text) {
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 1.1;
+  speechSynthesis.speak(utterance);
+  // Update the live region with the text for screen readers
+  ariaLiveRegion.textContent = text;
+}
+
+// Hint functionality with coin deduction
+document.getElementById('hintButton').addEventListener('click', () => {
+  if (coins >= 5) {
+    coins -= 5; // Deduct coins for using a hint
+    speak("Hint provided. 5 coins deducted.");
+  } else {
+    speak("Not enough coins for a hint. You can listen to an ad to earn free coins.");
+    document.getElementById('adButton').style.display = 'block'; // Show ad button
+  }
+  updateStatus();
+});
+
+// Listen to ad for free coins
+document.getElementById('adButton').addEventListener('click', () => {
+  speak("Playing audio ad. You can skip the ad if you prefer.");
+  sounds.ad.play(); // Simulate audio ad playback
+  setTimeout(() => {
+    coins += 10; // Reward coins after ad finishes
+    sounds.reward.play();
+    speak("Thank you for listening to the ad. You earned 10 coins!");
+    document.getElementById('adButton').style.display = 'none'; // Hide ad button
+    updateStatus();
+  }, 5000); // Simulate 5-second ad duration
+});
+
+// Update game status
+function updateStatus() {
+  statusElement.textContent = `Moves: 0 | Coins: ${coins}`;
+}
+</script>
+</body>
+</html>

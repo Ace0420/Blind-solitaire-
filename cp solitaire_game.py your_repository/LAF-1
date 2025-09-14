@@ -1,41 +1,780 @@
-import kivy
-from kivy.app import App
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.button import Button
-from kivy.uix.label import Label
-from kivy.uix.image import Image
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Voice Solitaire - Samsung Edition</title>
 
-class SolitaireGame(BoxLayout):
-    def __init__(self, **kwargs):
-        super(SolitaireGame, self).__init__(**kwargs)
+  <style>
+    :root {
+      --bg-primary: #111827;
+      --bg-secondary: #222;
+      --bg-tertiary: #1f2937;
+      --text-primary: #fff;
+      --text-secondary: #9ca3af;
+      --accent-blue: #3b82f6;
+      --accent-blue-light: #60a5fa;
+      --accent-green: #10b981;
+      --bg-green: #065f46;
+      --accent-red: #f87171;
+      --bg-red: #7f1d1d;
+      --border-radius: 0.5em;
+      --shadow: 0 0 24px rgba(0,0,0,0.4);
+    }
 
-        # Create the game board
-        self.orientation = "vertical"
+    * {
+      box-sizing: border-box;
+    }
 
-        # Create the end suits area
-        self.end_suits = BoxLayout(orientation="horizontal", size_hint=(1, 0.25))
-        for i in range(4):
-            self.end_suits.add_widget(Button(text="End Suit {}".format(i+1)))
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      line-height: 1.5;
+    }
 
-        # Create the tableau piles area
-        self.tableau_piles = BoxLayout(orientation="horizontal", size_hint=(1, 0.75))
-        for i in range(8):
-            pile = BoxLayout(orientation="vertical")
-            for j in range(5):
-                pile.add_widget(Image(source="card_back.png"))
-            self.tableau_piles.add_widget(pile)
+    .container {
+      max-width: 480px;
+      width: 100%;
+      margin: 2em auto;
+      padding: 2em;
+      background: var(--bg-secondary);
+      border-radius: 1em;
+      box-shadow: var(--shadow);
+      transition: box-shadow 0.3s ease;
+    }
 
-        # Add the end suits and tableau piles to the game board
-        self.add_widget(self.end_suits)
-        self.add_widget(self.tableau_piles)
+    .container.listening {
+      box-shadow: 0 0 32px var(--accent-blue);
+      animation: pulse 2s infinite;
+    }
 
-class SolitaireApp(App):
-    def build(self):
-        return SolitaireGame()
+    @keyframes pulse {
+      0% { box-shadow: 0 0 32px var(--accent-blue); }
+      50% { box-shadow: 0 0 48px var(--accent-blue-light); }
+      100% { box-shadow: 0 0 32px var(--accent-blue); }
+    }
 
-if __name__ == '__main__':
-    SolitaireApp().run()
-This code creates a basic game board layout with four end suits and eight tableau piles. The card images are not included in this example, and the game logic needs to 
+    .center { 
+      text-align: center; 
+    }
+
+    h1 {
+      margin: 0 0 1em 0;
+      font-size: 2em;
+      font-weight: 600;
+    }
+
+    .msg {
+      background: var(--bg-tertiary);
+      padding: 1.25em;
+      border-radius: var(--border-radius);
+      margin-bottom: 1em;
+      font-size: 1.1em;
+      min-height: 4em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      word-wrap: break-word;
+    }
+
+    .status {
+      background: var(--bg-green);
+      color: var(--accent-green);
+      padding: 0.75em 1em;
+      border-radius: var(--border-radius);
+      margin-bottom: 1em;
+      font-size: 0.95em;
+      font-weight: 500;
+    }
+
+    .error {
+      background: var(--bg-red);
+      color: var(--accent-red);
+      padding: 0.75em 1em;
+      border-radius: var(--border-radius);
+      margin-bottom: 1em;
+      font-size: 0.95em;
+      font-weight: 500;
+    }
+
+    .click-prompt {
+      background: linear-gradient(135deg, #1e40af, #3b82f6);
+      color: #fff;
+      padding: 1.25em;
+      border-radius: var(--border-radius);
+      margin-bottom: 1.5em;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: none;
+      font-size: 1em;
+      font-weight: 600;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      width: 100%;
+    }
+
+    .click-prompt:hover {
+      background: linear-gradient(135deg, #1d4ed8, #2563eb);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+    }
+
+    .click-prompt:active {
+      transform: translateY(0);
+    }
+
+    .alternative {
+      background: var(--bg-tertiary);
+      border: 2px solid var(--accent-blue);
+      padding: 1.5em;
+      border-radius: var(--border-radius);
+      margin-top: 1em;
+    }
+
+    .alternative h3 {
+      color: var(--accent-blue-light);
+      margin: 0 0 1em 0;
+    }
+
+    .text-input {
+      width: 100%;
+      padding: 0.75em;
+      background: var(--bg-primary);
+      border: 2px solid var(--text-secondary);
+      border-radius: var(--border-radius);
+      color: var(--text-primary);
+      font-size: 1em;
+      margin-bottom: 1em;
+    }
+
+    .text-input:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+    }
+
+    .send-btn {
+      background: var(--accent-green);
+      color: white;
+      border: none;
+      padding: 0.75em 1.5em;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.3s ease;
+    }
+
+    .send-btn:hover {
+      background: #059669;
+    }
+
+    .instructions {
+      color: var(--text-secondary);
+      font-size: 0.9em;
+      margin-top: 1.5em;
+      line-height: 1.6;
+      background: rgba(255,255,255,0.03);
+      padding: 1.25em;
+      border-radius: var(--border-radius);
+    }
+
+    .instructions strong {
+      color: var(--text-primary);
+      display: block;
+      margin-bottom: 0.75em;
+      font-size: 1em;
+    }
+
+    .command-list {
+      display: grid;
+      gap: 0.5em;
+      margin-top: 0.75em;
+    }
+
+    .command-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75em;
+    }
+
+    .command-name {
+      color: var(--accent-blue-light);
+      font-weight: 600;
+      min-width: 100px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.85em;
+    }
+
+    /* Mobile optimizations */
+    @media (max-width: 600px) {
+      .container { 
+        margin: 1em;
+        padding: 1.5em; 
+      }
+      
+      h1 {
+        font-size: 1.75em;
+      }
+      
+      .msg { 
+        font-size: 1em;
+        min-height: 3.5em;
+        padding: 1em;
+      }
+      
+      .instructions {
+        font-size: 0.85em;
+      }
+      
+      .command-name {
+        min-width: 80px;
+        font-size: 0.8em;
+      }
+    }
+
+    /* Accessibility improvements */
+    @media (prefers-reduced-motion: reduce) {
+      .container.listening {
+        animation: none;
+      }
+      
+      .click-prompt:hover {
+        transform: none;
+      }
+    }
+
+    .diagnostic {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--text-secondary);
+      padding: 1em;
+      border-radius: var(--border-radius);
+      margin-top: 1em;
+      font-size: 0.85em;
+    }
+
+    .diagnostic h4 {
+      color: var(--accent-blue-light);
+      margin: 0 0 0.5em 0;
+    }
+
+    .game-state {
+      background: var(--bg-tertiary);
+      padding: 1em;
+      border-radius: var(--border-radius);
+      margin: 1em 0;
+      font-size: 0.9em;
+    }
+
+    .game-state h4 {
+      color: var(--accent-blue-light);
+      margin: 0 0 0.5em 0;
+    }
+  </style>
+</head>
+<body>
+  <main class="container center" role="main" id="game-container">
+    <h1>🎴 Voice Solitaire</h1>
+    
+    <div id="status-area"></div>
+    
+    <div id="msg" class="msg" aria-live="polite" role="status">
+      Testing voice recognition compatibility...
+    </div>
+    
+    <button id="click-prompt" class="click-prompt" aria-label="Activate voice commands">
+      🎤 Tap to Speak
+    </button>
+
+    <div class="game-state" id="game-state" style="display: none;">
+      <h4>🎮 Game Status</h4>
+      <div id="game-info">No game active</div>
+    </div>
+    
+    <div class="instructions">
+      <strong>Voice Commands:</strong>
+      <div class="command-list">
+        <div class="command-item">
+          <span class="command-name">"start game"</span>
+          <span>Begin a new solitaire game</span>
+        </div>
+        <div class="command-item">
+          <span class="command-name">"draw card"</span>
+          <span>Draw from the deck to waste pile</span>
+        </div>
+        <div class="command-item">
+          <span class="command-name">"describe board"</span>
+          <span>Hear the current game state</span>
+        </div>
+        <div class="command-item">
+          <span class="command-name">"move card"</span>
+          <span>Move a card between columns</span>
+        </div>
+        <div class="command-item">
+          <span class="command-name">"help"</span>
+          <span>List all available commands</span>
+        </div>
+        <div class="command-item">
+          <span class="command-name">"quit game"</span>
+          <span>End the current game</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="diagnostic" id="diagnostic-info">
+      <h4>🔍 Device Compatibility Info:</h4>
+      <div id="device-info">Checking...</div>
+    </div>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const msgEl = document.getElementById('msg');
+      const container = document.getElementById('game-container');
+      const statusArea = document.getElementById('status-area');
+      const clickPrompt = document.getElementById('click-prompt');
+      const deviceInfo = document.getElementById('device-info');
+      const gameStateEl = document.getElementById('game-state');
+      const gameInfoEl = document.getElementById('game-info');
+      
+      let game = null;
+      let isListening = false;
+      let voiceSupported = false;
+
+      // Check device and browser compatibility
+      const checkCompatibility = () => {
+        const userAgent = navigator.userAgent;
+        const isSamsung = /Samsung/i.test(userAgent);
+        const isChrome = /Chrome/i.test(userAgent);
+        const hasWebSpeech = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+        const hasMediaDevices = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+        const isHttps = location.protocol === 'https:' || location.hostname === 'localhost';
+        
+        let info = `Device: ${isSamsung ? 'Samsung' : 'Other'}<br>`;
+        info += `Browser: ${isChrome ? 'Chrome' : 'Other'}<br>`;
+        info += `Protocol: ${isHttps ? 'HTTPS ✅' : 'HTTP ❌ (Voice needs HTTPS)'}<br>`;
+        info += `Speech Recognition: ${hasWebSpeech ? '✅ Available' : '❌ Not available'}<br>`;
+        info += `Microphone API: ${hasMediaDevices ? '✅ Available' : '❌ Not available'}<br>`;
+        
+        if (isSamsung && hasWebSpeech) {
+          info += `<br><strong>Samsung Note:</strong> Voice recognition may need permission in browser settings.`;
+        }
+        
+        if (!isHttps && hasWebSpeech) {
+          info += `<br><strong>Security Note:</strong> Voice recognition requires HTTPS in production.`;
+        }
+        
+        deviceInfo.innerHTML = info;
+        return hasWebSpeech && hasMediaDevices && isHttps;
+      };
+
+      const showStatus = (text, type = 'status') => {
+        statusArea.innerHTML = `<div class="${type}">${text}</div>`;
+        setTimeout(() => statusArea.innerHTML = '', 4000);
+      };
+
+      const updateMessage = (text) => {
+        msgEl.textContent = text;
+      };
+
+      const updateGameState = () => {
+        if (!game) {
+          gameStateEl.style.display = 'none';
+          return;
+        }
+        
+        gameStateEl.style.display = 'block';
+        let info = `Move ${game.moves} | Deck: ${game.deck.length} cards | `;
+        info += `Waste: ${game.waste.length > 0 ? game.waste[game.waste.length - 1].rank + ' of ' + game.waste[game.waste.length - 1].suit : 'empty'}`;
+        gameInfoEl.textContent = info;
+      };
+
+      const speak = (text, callback) => {
+        // Check if speech synthesis is available
+        if (!window.speechSynthesis) {
+          console.log('Speech synthesis not available');
+          updateMessage(text);
+          if (callback) callback();
+          return;
+        }
+
+        try {
+          window.speechSynthesis.cancel();
+        } catch (error) {
+          console.log('Could not cancel previous speech:', error);
+        }
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.85;
+        utterance.pitch = 1;
+        utterance.volume = 0.9;
+        
+        utterance.onend = () => {
+          if (callback) callback();
+        };
+        
+        utterance.onerror = (event) => {
+          console.error('Speech synthesis error:', event);
+          if (callback) callback();
+        };
+        
+        try {
+          window.speechSynthesis.speak(utterance);
+        } catch (error) {
+          console.error('Error speaking text:', error);
+          if (callback) callback();
+        }
+        
+        updateMessage(text);
+      };
+
+      // Enhanced Solitaire class
+      class Solitaire {
+        constructor() {
+          this.deck = [];
+          this.waste = [];
+          this.foundations = [[], [], [], []];
+          this.tableau = [[], [], [], [], [], [], []];
+          this.moves = 0;
+          this.initializeGame();
+        }
+
+        initializeGame() {
+          const suits = ['Spades', 'Hearts', 'Diamonds', 'Clubs'];
+          const ranks = ['Ace', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King'];
+          
+          this.deck = [];
+          suits.forEach(suit => {
+            ranks.forEach((rank, i) => {
+              this.deck.push({ 
+                suit, 
+                rank, 
+                value: i + 1, 
+                faceUp: false,
+                color: suit === 'Hearts' || suit === 'Diamonds' ? 'red' : 'black'
+              });
+            });
+          });
+          
+          this.shuffle();
+          this.deal();
+          updateGameState();
+          
+          // Safe speech call
+          setTimeout(() => {
+            speak("New solitaire game started! Seven columns dealt. Say 'describe board' to hear the layout or 'draw card' to begin.");
+          }, 500);
+        }
+
+        shuffle() {
+          for (let i = this.deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
+          }
+        }
+
+        deal() {
+          for (let col = 0; col < 7; col++) {
+            for (let row = 0; row <= col; row++) {
+              if (this.deck.length > 0) {
+                this.tableau[col].push(this.deck.pop());
+              }
+            }
+            if (this.tableau[col].length > 0) {
+              this.tableau[col][this.tableau[col].length - 1].faceUp = true;
+            }
+          }
+        }
+
+        drawCard() {
+          this.moves++;
+          
+          if (this.deck.length === 0) {
+            if (this.waste.length === 0) {
+              speak("Both deck and waste pile are empty.");
+              return;
+            }
+            this.deck = this.waste.reverse().map(card => ({ ...card, faceUp: false }));
+            this.waste = [];
+            updateGameState();
+            speak(`Reshuffled ${this.deck.length} cards from waste pile back into deck.`);
+            return;
+          }
+
+          const card = this.deck.pop();
+          card.faceUp = true;
+          this.waste.push(card);
+          updateGameState();
+          speak(`Drew the ${card.rank} of ${card.suit}.`);
+        }
+
+        describeBoard() {
+          let description = `Game state: Move ${this.moves}. `;
+          
+          if (this.waste.length > 0) {
+            const topWaste = this.waste[this.waste.length - 1];
+            description += `Waste pile shows ${topWaste.rank} of ${topWaste.suit}. `;
+          } else {
+            description += "Waste pile empty. ";
+          }
+          
+          description += `Deck has ${this.deck.length} cards. `;
+          
+          description += "Tableau: ";
+          for (let i = 0; i < 7; i++) {
+            if (this.tableau[i].length > 0) {
+              const topCard = this.tableau[i][this.tableau[i].length - 1];
+              description += `Column ${i + 1}: ${topCard.rank} of ${topCard.suit}. `;
+            } else {
+              description += `Column ${i + 1}: empty. `;
+            }
+          }
+
+          // Check foundations
+          let foundationDesc = "Foundations: ";
+          for (let i = 0; i < 4; i++) {
+            if (this.foundations[i].length > 0) {
+              const topCard = this.foundations[i][this.foundations[i].length - 1];
+              foundationDesc += `${topCard.suit} up to ${topCard.rank}. `;
+            }
+          }
+          
+          if (foundationDesc !== "Foundations: ") {
+            description += foundationDesc;
+          }
+
+          speak(description);
+        }
+
+        // Basic move validation (simplified for voice commands)
+        canMoveCard(fromCol, toCol) {
+          if (fromCol < 0 || fromCol >= 7 || toCol < 0 || toCol >= 7) return false;
+          if (this.tableau[fromCol].length === 0) return false;
+          
+          const fromCard = this.tableau[fromCol][this.tableau[fromCol].length - 1];
+          if (!fromCard.faceUp) return false;
+          
+          if (this.tableau[toCol].length === 0) {
+            return fromCard.rank === 'King';
+          }
+          
+          const toCard = this.tableau[toCol][this.tableau[toCol].length - 1];
+          return fromCard.color !== toCard.color && fromCard.value === toCard.value - 1;
+        }
+
+        moveCard(fromCol, toCol) {
+          if (!this.canMoveCard(fromCol, toCol)) {
+            speak(`Cannot move card from column ${fromCol + 1} to column ${toCol + 1}.`);
+            return false;
+          }
+          
+          const card = this.tableau[fromCol].pop();
+          this.tableau[toCol].push(card);
+          
+          // Flip the next card if available
+          if (this.tableau[fromCol].length > 0) {
+            const nextCard = this.tableau[fromCol][this.tableau[fromCol].length - 1];
+            if (!nextCard.faceUp) {
+              nextCard.faceUp = true;
+            }
+          }
+          
+          this.moves++;
+          updateGameState();
+          speak(`Moved ${card.rank} of ${card.suit} from column ${fromCol + 1} to column ${toCol + 1}.`);
+          return true;
+        }
+      }
+
+      const handleCommand = (command) => {
+        if (!command || command.trim() === '') {
+          speak("No command received. Please try again.");
+          return;
+        }
+
+        const cmd = command.toLowerCase().trim();
+        updateMessage(`Command: "${command}"`);
+        showStatus(`Processing: ${command}`);
+
+        if (cmd.includes('start') && (cmd.includes('game') || cmd.includes('new'))) {
+          game = new Solitaire();
+        } else if (cmd.includes('help')) {
+          speak("Voice commands: start game, draw card, describe board, move card from column X to Y, quit game. Tap the microphone button to give commands.");
+        } else if (!game) {
+          speak("No game active. Say 'start game' to begin.");
+        } else if (cmd.includes('draw') && cmd.includes('card')) {
+          game.drawCard();
+        } else if (cmd.includes('describe') || cmd.includes('board')) {
+          game.describeBoard();
+        } else if (cmd.includes('move')) {
+          // Simple move parsing: "move from 1 to 3" or "move 1 to 3"
+          const numbers = cmd.match(/\d+/g);
+          if (numbers && numbers.length >= 2) {
+            const fromCol = parseInt(numbers[0]) - 1;
+            const toCol = parseInt(numbers[1]) - 1;
+            game.moveCard(fromCol, toCol);
+          } else {
+            speak("Say 'move from column 1 to column 3' or similar to move cards.");
+          }
+        } else if (cmd.includes('quit') || cmd.includes('stop')) {
+          speak(`Game ended after ${game.moves} moves. Say 'start game' to play again.`);
+          game = null;
+          updateGameState();
+        } else {
+          speak("I didn't understand that command. Say 'help' to hear all available commands.");
+        }
+      };
+
+      // Voice recognition - enhanced error handling
+      let currentRecognition = null;
+
+      const startVoiceRecognition = () => {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (!SpeechRecognition) {
+          showStatus("❌ Voice recognition not available on this device", "error");
+          updateMessage("This device doesn't support voice recognition. Please try a different browser or device.");
+          return;
+        }
+
+        // Stop any existing recognition
+        if (currentRecognition) {
+          currentRecognition.stop();
+          currentRecognition = null;
+        }
+
+        currentRecognition = new SpeechRecognition();
+        currentRecognition.continuous = false;
+        currentRecognition.lang = 'en-US';
+        currentRecognition.interimResults = false;
+        currentRecognition.maxAlternatives = 3; // More alternatives for better accuracy
+
+        currentRecognition.onstart = () => {
+          console.log('Voice recognition started');
+          showStatus("🎤 Listening... speak your command", "status");
+          container.classList.add('listening');
+          voiceSupported = true;
+          isListening = true;
+        };
+
+        currentRecognition.onresult = (event) => {
+          const result = event.results[0];
+          const command = result[0].transcript;
+          const confidence = result[0].confidence;
+          
+          console.log(`Command: "${command}" (confidence: ${confidence})`);
+          
+          // Log alternatives for debugging
+          for (let i = 0; i < result.length; i++) {
+            console.log(`Alternative ${i}: "${result[i].transcript}" (${result[i].confidence})`);
+          }
+          
+          container.classList.remove('listening');
+          isListening = false;
+          handleCommand(command);
+          
+          // Auto-ready for next command
+          if (game && voiceSupported) {
+            setTimeout(() => {
+              clickPrompt.textContent = "🎤 Ready for Next Command";
+            }, 2000);
+          }
+        };
+
+        currentRecognition.onerror = (event) => {
+          console.error('Speech recognition error:', event.error, event);
+          container.classList.remove('listening');
+          isListening = false;
+          
+          let errorMessage = "";
+          switch (event.error) {
+            case 'no-speech':
+              errorMessage = "No speech detected. Try speaking more clearly.";
+              break;
+            case 'not-allowed':
+              errorMessage = "Microphone permission denied. Enable in browser settings.";
+              alternativeInput.style.display = 'block';
+              break;
+            case 'network':
+              errorMessage = "Network error. Check internet connection.";
+              break;
+            case 'audio-capture':
+              errorMessage = "No microphone found. Check hardware.";
+              alternativeInput.style.display = 'block';
+              break;
+            case 'service-not-allowed':
+              errorMessage = "Speech service not allowed. Try HTTPS or different browser.";
+              alternativeInput.style.display = 'block';
+              break;
+            default:
+              errorMessage = `Voice recognition error: ${event.error}. Please try again.`;
+          }
+          
+          showStatus(errorMessage, "error");
+          clickPrompt.textContent = "🎤 Try Voice Recognition Again";
+        };
+
+        currentRecognition.onend = () => {
+          console.log('Voice recognition ended');
+          container.classList.remove('listening');
+          isListening = false;
+          currentRecognition = null;
+        };
+
+        // Start recognition with error handling
+        try {
+          currentRecognition.start();
+          clickPrompt.textContent = "🎤 Listening...";
+        } catch (error) {
+          console.error('Error starting recognition:', error);
+          showStatus(`Voice recognition unavailable: ${error.message}`, "error");
+        }
+      };
+
+      // Event listeners
+      clickPrompt.addEventListener('click', () => {
+        if (!isListening) {
+          startVoiceRecognition();
+        }
+      });
+
+      // Prevent page refresh on mobile
+      document.addEventListener('touchstart', function(){}, true);
+
+      // Initialize with better error handling
+      const initialize = () => {
+        const compatible = checkCompatibility();
+        
+        updateMessage("Voice Solitaire ready! Tap the microphone button to start playing.");
+        
+        // Show text input as backup option
+        alternativeInput.style.display = 'block';
+        alternativeInput.style.display = 'block';
+        
+        // Focus management for accessibility
+        clickPrompt.focus();
+        
+        // Delayed announcement to ensure speech synthesis is ready
+        setTimeout(() => {
+          if (window.speechSynthesis) {
+            speak("Voice Solitaire ready. Tap the microphone button to start playing with voice commands.");
+          } else {
+            updateMessage("Voice Solitaire loaded, but voice synthesis is not available on this device.");
+          }
+        }, 1500);
+      };
+
+      initialize();
+    });
+  </script>
+</body>
+</html>
 
 
 
